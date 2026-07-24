@@ -9,7 +9,7 @@
         .card { text-align: center; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 350px; } 
         button { background: #007bff; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 50px; cursor: pointer; transition: 0.2s; margin: 10px; width: 80%; } 
         button:disabled { background: #cccccc; cursor: not-allowed; } 
-        #status { margin-top: 20px; color: #555; font-weight: bold; } 
+        #status { margin-top: 20px; color: #555; font-weight: bold; min-height: 40px; } 
     </style> 
 </head> 
 <body> 
@@ -56,7 +56,7 @@
     }; 
 
     recognition.onresult = async (event) => { 
-        // FIXED: Added the missing nested index accessor [0] to extract the string cleanly
+        // ABSOLUTE FIX: Accessing the transcript array index matrix correctly
         const lastIndex = event.results.length - 1; 
         const userText = event.results[lastIndex][0].transcript; 
         console.log("User said:", userText); 
@@ -69,7 +69,10 @@
                 body: JSON.stringify({ text: userText }) 
             }); 
 
-            if (!response.ok) throw new Error("Server error"); 
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.error || "Server error");
+            } 
 
             const responseAudioBlob = await response.blob(); 
             const audioUrl = URL.createObjectURL(responseAudioBlob); 
@@ -78,7 +81,7 @@
             audio.play(); 
             audio.onended = () => status.innerText = "Status: Idle"; 
         } catch (err) { 
-            status.innerText = "Error fetching response from server."; 
+            status.innerText = "Error: " + err.message; 
             console.error(err); 
         } 
     }; 
