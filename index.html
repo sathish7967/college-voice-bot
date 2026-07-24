@@ -40,7 +40,7 @@
 
             try {
                 // REPLACE THIS LINK WITH YOUR LIVE BACKEND LINK LATER
-                const response = await fetch('YOUR_RENDER_URL_HERE/chat', { method: 'POST', body: formData });
+                const response = await fetch('https://onrender.com', { method: 'POST', body: formData });
                 if (!response.ok) throw new Error("Server error");
                 const responseAudioBlob = await response.blob();
                 const audioUrl = URL.createObjectURL(responseAudioBlob);
