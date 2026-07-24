@@ -32,7 +32,7 @@
     } 
 
     const recognition = new SpeechRecognition(); 
-    recognition.continuous = false; 
+    recognition.continuous = true; 
     recognition.interimResults = false; 
     recognition.lang = ''; 
 
@@ -56,8 +56,9 @@
     }; 
 
     recognition.onresult = async (event) => { 
-        // FIXED: Re-added precise result index matrix formatting 
-        const userText = event.results[0][0].transcript; 
+        // FIXED: Added correct matrix array targeting [lastIndex][0] to fetch speech text
+        const lastIndex = event.results.length - 1;
+        const userText = event.results[lastIndex][0].transcript; 
         console.log("User said:", userText); 
         status.innerText = "Status: Analyzing your question..."; 
 
