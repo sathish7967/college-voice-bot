@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice College Bot</title>
+    <style>
+        body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f2f5; margin: 0; }
+        .card { text-align: center; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        button { background: #007bff; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 50px; cursor: pointer; transition: 0.2s; }
+        button:active { background: #0056b3; }
+        #status { margin-top: 20px; color: #555; font-weight: bold; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h2>College Voice Assistant</h2>
+    <p>Click, speak your question in any language, and click stop.</p>
+    <button id="startBtn">Start Recording</button>
+    <button id="stopBtn" disabled>Stop</button>
+    <div id="status">Idle</div>
+</div>
+<script>
+    let mediaRecorder;
+    let audioChunks = [];
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const status = document.getElementById('status');
+
+    startBtn.onclick = async () => {
+        audioChunks = [];
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+        mediaRecorder.onstop = async () => {
+            status.innerText = "Processing answer...";
+            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'file.wav');
+
+            try {
+                // REPLACE THIS LINK WITH YOUR LIVE BACKEND LINK LATER
+                const response = await fetch('YOUR_RENDER_URL_HERE/chat', { method: 'POST', body: formData });
+                if (!response.ok) throw new Error("Server error");
+                const responseAudioBlob = await response.blob();
+                const audioUrl = URL.createObjectURL(responseAudioBlob);
+                const audio = new Audio(audioUrl);
+                status.innerText = "Playing response...";
+                audio.play();
+                audio.onended = () => status.innerText = "Idle";
+            } catch (err) {
+                status.innerText = "Error fetching response.";
+                console.error(err);
+            }
+        };
+        mediaRecorder.start();
+        status.innerText = "Listening...";
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+    };
+
+    stopBtn.onclick = () => {
+        mediaRecorder.stop();
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+    };
+</script>
+</body>
+</html>

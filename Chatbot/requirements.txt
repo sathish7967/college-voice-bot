@@ -1,0 +1,7 @@
+flask
+flask-cors
+deep-translator
+gTTS
+SpeechRecognition
+requests
+gunicorn

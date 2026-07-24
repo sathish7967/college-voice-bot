@@ -1,0 +1,15 @@
+{
+  "college_name": "Siddhartha Institute of Engineering and Technology, Ibrahimpatnam",
+  "courses": [
+    {"name": "Computer Science Engineering", "duration": "4 years", "fees": "₹8,000/year"},
+    {"name": "Data Science", "duration": "4 years", "fees": "₹8,500/year"}
+  ],
+  "admissions": {
+    "deadline": "August 15, 2026",
+    "eligibility": "Minimum 70% in High School Mathematics."
+  },
+  "placement": {
+    "highest_package": "₹45,000/year",
+    "top_recruiters": ["Google", "Microsoft", "TATA", "Amazon"]
+  }
+}
