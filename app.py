@@ -5,7 +5,6 @@ from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from deep_translator import GoogleTranslator
 from gtts import gTTS
-import speech_recognition as sr
 
 app = Flask(__name__)
 CORS(app)
@@ -19,24 +18,19 @@ with open("college_data.json", "r") as f:
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    if "audio" not in request.files:
-        return jsonify({"error": "No audio file provided"}), 400
+    data = request.get_json()
+    if not data or "text" not in data:
+        return jsonify({"error": "No text provided"}), 400
         
-    audio_file = request.files["audio"]
-    wav_path = "user_input.wav"
-    audio_file.save(wav_path)
+    user_text = data["text"]
 
     try:
-        # Native web speech parsing
-        recognizer = sr.Recognizer()
-        with sr.AudioFile(wav_path) as source:
-            audio_data = recognizer.record(source)
-            user_text = recognizer.recognize_google(audio_data)
-
+        # 1. Translate Input Text to English
         detector = GoogleTranslator(source='auto', target='en')
         text_in_english = detector.translate(user_text)
         detected_lang = detector.source
 
+        # 2. Query Llama 3 on Hugging Face
         system_prompt = f"System: You are an advisor. Use only this data: {json.dumps(college_context)}. Answer in 2 sentences max."
         payload = {
             "inputs": f"{system_prompt}\n\nUser: {text_in_english}\nAssistant:",
@@ -46,10 +40,12 @@ def chat():
         hf_response = requests.post(HF_API_URL, headers=headers, json=payload)
         engine_reply_en = hf_response.json()['generated_text'].strip()
 
+        # 3. Translate Response back to User's Native Language
         final_reply_text = engine_reply_en
         if detected_lang != 'en':
             final_reply_text = GoogleTranslator(source='en', target=detected_lang).translate(engine_reply_en)
 
+        # 4. Synthesize voice audio track
         tts = gTTS(text=final_reply_text, lang=detected_lang)
         output_audio_path = "response.mp3"
         tts.save(output_audio_path)
@@ -58,9 +54,6 @@ def chat():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    finally:
-        if os.path.exists(wav_path):
-            os.remove(wav_path)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
