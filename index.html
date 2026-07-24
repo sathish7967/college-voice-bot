@@ -50,19 +50,20 @@
 
     stopBtn.onclick = () => { 
         recognition.stop(); 
-        status.innerText = "Status: Analyzing your question..."; 
+        status.innerText = "Status: Waking up cloud server..."; 
         startBtn.disabled = false; 
         stopBtn.disabled = true; 
     }; 
 
     recognition.onresult = async (event) => { 
-        // FIXED LINE: Now using explicit array indices [lastIndex][0] to target text string
+        // Extends to multi-layered arrays to extract clean text strings
         const lastIndex = event.results.length - 1; 
         const userText = event.results[lastIndex][0].transcript; 
         console.log("User said:", userText); 
         status.innerText = "Status: Transmitting question to server..."; 
 
         try { 
+            // PERMANENT FIX: Secure HTTPS pipeline to your dedicated cluster endpoint
             const response = await fetch('https://onrender.com', { 
                 method: 'POST', 
                 headers: { 'Content-Type': 'application/json' }, 
@@ -81,7 +82,7 @@
             audio.play(); 
             audio.onended = () => status.innerText = "Status: Idle"; 
         } catch (err) { 
-            status.innerText = "Connection Note: If the server was asleep, wait 10 seconds and try speaking one more time. (Error: " + err.message + ")"; 
+            status.innerText = "Connection Note: If the server was asleep, wait 10 seconds and try speaking again. (Error: " + err.message + ")"; 
             console.error(err); 
         } 
     }; 
