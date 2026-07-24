@@ -3,64 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voice College Bot</title>
+    <title>Siddhartha Institute of Engineering and Technology</title>
     <style>
         body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f2f5; margin: 0; }
-        .card { text-align: center; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        button { background: #007bff; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 50px; cursor: pointer; transition: 0.2s; }
-        button:active { background: #0056b3; }
+        .card { text-align: center; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 350px; }
+        button { background: #007bff; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 50px; cursor: pointer; transition: 0.2s; margin: 10px; width: 80%; }
+        button:disabled { background: #cccccc; cursor: not-allowed; }
         #status { margin-top: 20px; color: #555; font-weight: bold; }
     </style>
 </head>
 <body>
 <div class="card">
     <h2>College Voice Assistant</h2>
-    <p>Click, speak your question in any language, and click stop.</p>
+    <p>Click "Start", talk in any language, and click "Stop".</p>
     <button id="startBtn">Start Recording</button>
     <button id="stopBtn" disabled>Stop</button>
-    <div id="status">Idle</div>
+    <div id="status">Status: Idle</div>
 </div>
+
 <script>
-    let mediaRecorder;
-    let audioChunks = [];
     const startBtn = document.getElementById('startBtn');
     const stopBtn = document.getElementById('stopBtn');
     const status = document.getElementById('status');
 
-    startBtn.onclick = async () => {
-        audioChunks = [];
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-        mediaRecorder.onstop = async () => {
-            status.innerText = "Processing answer...";
-            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-            const formData = new FormData();
-            formData.append('audio', audioBlob, 'file.wav');
-
-            try {
-                // REPLACE THIS LINK WITH YOUR LIVE BACKEND LINK LATER
-                const response = await fetch('https://onrender.com', { method: 'POST', body: formData });
-                if (!response.ok) throw new Error("Server error");
-                const responseAudioBlob = await response.blob();
-                const audioUrl = URL.createObjectURL(responseAudioBlob);
-                const audio = new Audio(audioUrl);
-                status.innerText = "Playing response...";
-                audio.play();
-                audio.onended = () => status.innerText = "Idle";
-            } catch (err) {
-                status.innerText = "Error fetching response.";
-                console.error(err);
-            }
-        };
-        mediaRecorder.start();
-        status.innerText = "Listening...";
+    // Initialize browser-native speech recognition
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        status.innerText = "Error: Your browser does not support voice features. Please use Google Chrome.";
         startBtn.disabled = true;
-        stopBtn.disabled = false;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    // 'auto' tells the browser to automatically detect or capture user spoken language dialects
+    recognition.lang = ''; 
+
+    startBtn.onclick = () => {
+        try {
+            recognition.start();
+            status.innerText = "Status: Listening... Speak now.";
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+        } catch (err) {
+            status.innerText = "Mic Error. Check browser permissions.";
+            console.error(err);
+        }
     };
 
     stopBtn.onclick = () => {
-        mediaRecorder.stop();
+        recognition.stop();
+        status.innerText = "Status: Processing answer...";
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+    };
+
+    recognition.onresult = async (event) => {
+        const userText = event.results[event.results.length - 1][0].transcript;
+        console.log("User said:", userText);
+        status.innerText = "Status: Analyzing your question...";
+
+        try {
+            // Send the text directly to the Render backend service
+            const response = await fetch('https://onrender.com', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: userText })
+            });
+
+            if (!response.ok) throw new Error("Server error");
+            
+            const responseAudioBlob = await response.blob();
+            const audioUrl = URL.createObjectURL(responseAudioBlob);
+            const audio = new Audio(audioUrl);
+            status.innerText = "Status: Speaking response...";
+            audio.play();
+            audio.onended = () => status.innerText = "Status: Idle";
+        } catch (err) {
+            status.innerText = "Error fetching response from server.";
+            console.error(err);
+        }
+    };
+
+    recognition.onerror = (event) => {
+        status.innerText = "Speech recognition error: " + event.error;
         startBtn.disabled = false;
         stopBtn.disabled = true;
     };
